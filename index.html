@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manejador de Archivos</title>
+    <style>
+        .body{
+            width: 600px;
+            margin: 0 auto;
+        }
+        #file-input {
+            background-color: rgb(207, 232, 220);
+            border: 2px solid rgb(79, 185, 227);
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+        }
+
+        #file-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .file-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px;
+            border: 1px solid #ddd;
+            margin-bottom: 5px;
+            cursor: pointer;
+        }
+
+        .file-item img {
+            margin-right: 8px;
+        }
+
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="create-folder-section">
+        <h1>Crear Carpeta</h1>
+
+        <!-- Botón para crear carpeta -->
+        <button onclick="createFolder()">Crear Carpeta</button>
+
+        <p id="folder-message">Carpeta aún no creada</p>
+
+        <div id="folder-actions" class="hidden">
+            <!-- Transición a la sección de subida de archivos -->
+            <button onclick="showUploadSection()">Ir a Subida de Archivos</button>
+        </div>
+    </div>
+
+    <div id="upload-section" class="hidden">
+        <h1 id="folder-title">Manejador de Archivos</h1>
+
+        <!-- Botón para seleccionar y subir archivos -->
+        <button onclick="openFileExplorer()">Subir Archivos</button>
+
+        <!-- Área de drag and drop -->
+        <div id="drag-drop-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)">
+            Arrastra y suelta archivos aquí
+        </div>
+
+        <!-- Input para seleccionar archivos -->
+        <input type="file" id="file-input" multiple onchange="handleFileSelection(event)">
+
+
+        <!-- Lista de archivos cargados -->
+        <ul id="file-list"></ul>
+
+        <!-- Mostrar el peso del archivo seleccionado -->
+        <p>Peso del archivo: <span id="file-size">0 KB</span></p>
+
+        <!-- Script para cargar archivos mediante drag and drop -->
+        <script>
+            let folderName = localStorage.getItem('folderName') || generateRandomName();
+
+            function generateRandomName() {
+                const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+                let randomName = '';
+                for (let i = 0; i < 3; i++) {
+                    randomName += characters.charAt(Math.floor(Math.random() * characters.length));
+                }
+                return randomName;
+            }
+
+            function createFolder() {
+                // Implementar la lógica para crear la carpeta en el servidor
+                alert(`Carpeta creada: ${folderName}`);
+                document.getElementById('folder-message').textContent = `Carpeta creada: ${folderName}`;
+                document.getElementById('folder-actions').classList.remove('hidden');
+            }
+
+            function showUploadSection() {
+                document.getElementById('create-folder-section').classList.add('hidden');
+                document.getElementById('upload-section').classList.remove('hidden');
+                document.getElementById('folder-title').textContent = `Carpeta: ${folderName}`;
+            }
+
+            function openFileExplorer() {
+                document.getElementById('file-input').click();
+            }
+
+            function handleFileSelection(event) {
+                updateFileList(event.target.files);
+            }
+
+            function handleDrop(event) {
+                event.preventDefault();
+                const files = event.dataTransfer.files;
+                updateFileList(files);
+            }
+
+            function handleDragOver(event) {
+                event.preventDefault();
+            }
+
+            function updateFileList(files) {
+                const fileList = document.getElementById('file-list');
+                fileList.innerHTML = '';
+
+                for (let i = 0; i < files.length; i++) {
+                    const listItem = document.createElement('li');
+                    const fileItem = document.createElement('div');
+                    const fileName = document.createElement('span');
+                    const fileSize = document.createElement('span');
+                    const downloadButton = document.createElement('button');
+                    const deleteButton = document.createElement('button');
+                    const fileTypeIcon = document.createElement('img');
+
+                    const fileType = getFileType(files[i].type);
+                    fileTypeIcon.src = `icons/${fileType}.png`;
+                    fileName.textContent = sanitizeFileName(files[i].name);
+                    fileSize.textContent = `${(files[i].size / 1024).toFixed(2)} KB`;
+                    downloadButton.textContent = 'Descargar';
+                    deleteButton.textContent = 'Eliminar';
+
+                    downloadButton.onclick = createDownloadHandler(files[i].name);
+                    deleteButton.onclick = createDeleteHandler(listItem, files[i].name);
+
+                    fileItem.classList.add('file-item');
+                    fileItem.appendChild(fileTypeIcon);
+                    fileItem.appendChild(fileName);
+                    fileItem.appendChild(fileSize);
+                    fileItem.appendChild(downloadButton);
+                    fileItem.appendChild(deleteButton);
+
+                    listItem.appendChild(fileItem);
+                    fileList.appendChild(listItem);
+                }
+
+                updateFolderSize();
+                localStorage.setItem('folderName', folderName);
+            }
+
+            function updateFolderSize() {
+                const files = document.getElementById('file-input').files;
+                let folderSize = 0;
+
+                for (let i = 0; i < files.length; i++) {
+                    folderSize += files[i].size;
+                }
+
+                const sizeInKB = (folderSize / 1024).toFixed(2);
+                document.getElementById('file-size').textContent = `${sizeInKB} KB`;
+            }
+
+            function getFileType(mimeType) {
+                // Implementar lógica para obtener el tipo de archivo según el MIME type
+                // Por simplicidad, aquí se devuelve una cadena vacía.
+                return '';
+            }
+
+            function sanitizeFileName(fileName) {
+                // Reemplaza espacios vacíos con guiones y elimina caracteres especiales
+                return fileName.replace(/\s+/g, '-').replace(/[^\w.-]/g, '');
+            }
+
+            function createDownloadHandler(fileName) {
+                return function() {
+                    const downloadLink = document.createElement('a');
+                    downloadLink.href = `data:text/plain;charset=utf-8,${encodeURIComponent('Contenido del archivo')}`;
+                    downloadLink.download = fileName;
+                    downloadLink.style.display = 'none';
+                    document.body.appendChild(downloadLink);
+                    downloadLink.click();
+                    document.body.removeChild(downloadLink);
+                };
+            }
+
+            function createDeleteHandler(listItem, fileName) {
+                return function() {
+                    // Implementar lógica para eliminar el archivo
+                    alert(`Eliminando: ${fileName}`);
+                    listItem.remove();
+                };
+            }
+        </script>
+    </div>
+</body>
+</html>
